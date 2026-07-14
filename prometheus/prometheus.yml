@@ -79,18 +79,18 @@ scrape_configs:
   # Requiere que tu backend exponga /metrics por HTTPS (con o sin basic_auth).
   # No requiere cambios de red.
   #
-  # - job_name: backend
-  #   metrics_path: /metrics
-  #   scheme: https
-  #   scrape_interval: 30s
-  #   static_configs:
-  #     - targets: ['api.tudominio.com']
-  #       labels:
-  #         service: backend
-  #         env: production
-  #   basic_auth:                                # opcional, recomendado
-  #     username: prometheus
-  #     password_file: /etc/prometheus/metrics_password
+  - job_name: backend
+    metrics_path: /api/v1/metrics
+    scheme: https
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['propiedades-back.sdkconsultoria.com']
+        labels:
+          service: backend
+          env: production
+  # basic_auth:                                # opcional, recomendado
+  #   username: prometheus
+  #   password_file: /etc/prometheus/metrics_password
 
   # ---------- OPCION B: SCRAPE VIA RED DOCKER COMPARTIDA ----------
   # Requiere que tanto este stack como tu app esten en la misma network.

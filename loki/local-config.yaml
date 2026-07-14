@@ -1,0 +1,48 @@
+# Configuracion de Loki en modo single-binary con storage en filesystem.
+# Adecuado para un solo host. Para multi-host cambiar a modo scalable
+# y usar S3/GCS/Azure Blob como object_store.
+
+auth_enabled: false
+
+server:
+  http_listen_port: 3100
+  grpc_listen_port: 9096
+
+common:
+  ring:
+    kvstore:
+      store: inmemory
+  replication_factor: 1
+  path_prefix: /loki
+
+schema_config:
+  configs:
+    - from: 2024-01-01
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+
+storage_config:
+  tsdb_shipper:
+    active_index_directory: /loki/tsdb-index
+    cache_location: /loki/tsdb-cache
+  filesystem:
+    directory: /loki/chunks
+
+limits_config:
+  retention_period: 0s
+  ingestion_rate_mb: 50
+  ingestion_burst_size_mb: 100
+  max_entries_limit_per_query: 5000
+  max_query_series: 500
+
+compactor:
+  working_directory: /loki/compactor
+  retention_enabled: false
+
+# Auto-descubrimiento basico de logs locales (opcional)
+# Para enviar logs al endpoint de Loki desde una app:
+#   POST http://loki:3100/loki/api/v1/push

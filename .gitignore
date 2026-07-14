@@ -1,0 +1,14 @@
+# Variables de entorno con secretos
+.env
+.env.*
+!.env.example
+
+# Backups de configuracion
+*.bak
+*.orig
+*.tmp
+
+# Archivos locales
+.DS_Store
+*.log
+*.swp

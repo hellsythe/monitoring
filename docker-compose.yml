@@ -1,5 +1,5 @@
 # =============================================================================
-# Grafana + Prometheus + Loki + Promtail stack
+# Grafana + Prometheus + Loki + Promtail + Alertmanager stack
 # =============================================================================
 #
 # DESPLIEGUE EN COOLIFY:
@@ -37,19 +37,50 @@ services:
       - '--web.console.libraries=/usr/share/prometheus/console_libraries'
       - '--web.console.templates=/usr/share/prometheus/consoles'
       - '--web.enable-lifecycle'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/rules:/etc/prometheus/rules:ro
       - prometheus-data:/prometheus
     ports:
       - "127.0.0.1:9091:9090"
     networks:
       - monitoring
+    depends_on:
+      - alertmanager
     restart: unless-stopped
     deploy:
       resources:
         limits:
           cpus: '1'
           memory: 1G
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: monitoring-alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    volumes:
+      - ./alertmanager/entrypoint.sh:/entrypoint.sh:ro
+      - ./alertmanager/alertmanager.yml.template:/etc/alertmanager/alertmanager.yml.template:ro
+      - alertmanager-data:/alertmanager
+    entrypoint: ['/bin/sh', '/entrypoint.sh']
+    environment:
+      - ALERT_WEBHOOK_URL=${ALERT_WEBHOOK_URL:-}
+      - SMTP_SMARTHOST=${SMTP_SMARTHOST:-}
+      - SMTP_USERNAME=${SMTP_USERNAME:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+    ports:
+      - "127.0.0.1:9093:9093"
+    networks:
+      - monitoring
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
 
   loki:
     image: grafana/loki:3.3.2
@@ -100,6 +131,7 @@ services:
       - GF_INSTALL_PLUGINS=${GRAFANA_PLUGINS:-}
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
       - grafana-data:/var/lib/grafana
     ports:
       - "127.0.0.1:3030:3000"
@@ -115,8 +147,6 @@ services:
           cpus: '0.5'
           memory: 512M
     labels:
-      # Coolify detecta FQDNs con la variable ${SERVICE_FQDN_<PUERTO>}
-      # La sustitucion la hace Coolify al desplegar.
       - "coolify.managed=true"
       - "coolify.type=service"
       - "traefik.enable=true"
@@ -134,6 +164,8 @@ networks:
 volumes:
   prometheus-data:
     name: monitoring-prometheus-data
+  alertmanager-data:
+    name: monitoring-alertmanager-data
   loki-data:
     name: monitoring-loki-data
   grafana-data:

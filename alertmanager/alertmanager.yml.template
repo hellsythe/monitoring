@@ -1,0 +1,73 @@
+# Configuracion de Alertmanager para notificaciones desde Prometheus.
+#
+# =============================================================================
+# NOTIFICACIONES DESACTIVADAS
+# =============================================================================
+# Para activar notificaciones, tenes dos opciones:
+#
+# Opcion A: Webhook (Slack, Discord, Msteams, etc.)
+#   1. Define ALERT_WEBHOOK_URL en el archivo .env
+#   2. Descomenta el bloque webhook_configs dentro del receiver 'default'
+#
+# Opcion B: Email via SMTP
+#   1. Define SMTP_SMARTHOST, SMTP_USERNAME y SMTP_PASSWORD en .env
+#   2. Descomenta el bloque email_configs dentro del receiver 'default'
+#   3. Cambia el campo route.receiver a 'email'
+#
+# Cualquier cambio requiere reiniciar Alertmanager:
+#   docker compose -f monitoring-stack/docker-compose.yml restart alertmanager
+# =============================================================================
+
+global:
+  resolve_timeout: 5m
+
+# Enrutamiento de alertas. Las alertas se agrupan por alertname, cluster y
+# service, y se envian al receiver 'default' salvo que coincidan con otra ruta.
+route:
+  receiver: 'default'
+  group_by: ['alertname', 'service']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    - matchers:
+        - severity="critical"
+      receiver: 'default'
+      repeat_interval: 30m
+
+# =============================================================================
+# Receivers
+# =============================================================================
+# Por ahora NO hay notification_configs activos, asi que Alertmanager
+# recibira las alertas pero NO las enviara a ningun lado (silenciosamente).
+# Esto mantiene Prometheus evaluando reglas, visibles en dashboards,
+# sin generar ruido de notificaciones fallidas.
+receivers:
+  - name: 'default'
+    # ---------- Webhook (Slack / Discord / custom) ----------
+    # Descomenta el bloque siguiente y define ALERT_WEBHOOK_URL en .env
+    #
+    # webhook_configs:
+    #   - url: '${ALERT_WEBHOOK_URL}'
+    #     send_resolved: true
+    #     max_alerts: 0
+
+    # ---------- Email via SMTP ----------
+    # Descomenta el bloque siguiente y configura SMTP_* en .env.
+    # Cambia route.receiver arriba a 'email' para enrutar aqui.
+    #
+    # email_configs:
+    #   - to: 'ops@tudominio.com'
+    #     from: 'alertmanager@tudominio.com'
+    #     smarthost: '${SMTP_SMARTHOST}'
+    #     auth_username: '${SMTP_USERNAME}'
+    #     auth_password: '${SMTP_PASSWORD}'
+    #     require_tls: true
+
+# Inhibit: silencia alertas redundantes.
+inhibit_rules:
+  - source_matchers:
+      - severity="critical"
+    target_matchers:
+      - severity="warning"
+    equal: ['alertname', 'service']

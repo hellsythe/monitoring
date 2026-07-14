@@ -1,0 +1,141 @@
+# Reglas de alertas para el stack de monitoring.
+# Prometheus evalua estas reglas en evaluate_interval (15s por defecto).
+# Las alertas activas se envian a Alertmanager.
+
+groups:
+  - name: monitoring-stack-health
+    interval: 30s
+    rules:
+
+      # =================================================================
+      # Targets caidos
+      # =================================================================
+      - alert: ScrapeTargetDown
+        expr: up == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Scrape target {{ $labels.job }} down"
+          description: "Target {{ $labels.instance }} en el job {{ $labels.job }} esta caido desde hace 5+ minutos."
+
+      - alert: ScrapeTargetUnhealthy
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Scrape target {{ $labels.job }} inestable"
+          description: "Target {{ $labels.instance }} en job {{ $labels.job }} sin scrape exitoso (ultimo intento)."
+
+      # =================================================================
+      # Prometheus
+      # =================================================================
+      - alert: PrometheusTSDBNearLimit
+        expr: prometheus_tsdb_storage_blocks_bytes > 45 * 1024 * 1024 * 1024
+        for: 10m
+        labels:
+          severity: warning
+          service: prometheus
+        annotations:
+          summary: "Prometheus TSDB cerca del limite (50GB)"
+          description: "Bloques TSDB ocupan {{ $value | humanize1024 }}B. Considera reducir retention_time."
+
+      - alert: PrometheusTSDBCorruption
+        expr: increase(prometheus_tsdb_compactions_failed_total[1h]) > 0
+        for: 5m
+        labels:
+          severity: critical
+          service: prometheus
+        annotations:
+          summary: "Prometheus TSDB compaction fallando"
+          description: "Compactaciones fallidas en la ultima hora: {{ $value }}."
+
+      - alert: PrometheusHighRestartCount
+        expr: increase(kube_pod_container_status_restarts_total[1h]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          service: prometheus
+        annotations:
+          summary: "Prometheus se ha reiniciado"
+          description: "Reinicios detectados en la ultima hora."
+
+      # =================================================================
+      # Loki
+      # =================================================================
+      - alert: LokiDown
+        expr: loki_ready == 0
+        for: 5m
+        labels:
+          severity: critical
+          service: loki
+        annotations:
+          summary: "Loki no esta listo"
+          description: "Loki esta reportando como no listo desde hace 5+ minutos. Verifica el servicio."
+
+      - alert: LokiIngestionRateLimitNear
+        expr: rate(loki_distributor_bytes_received_total[5m]) > 40 * 1024 * 1024
+        for: 10m
+        labels:
+          severity: warning
+          service: loki
+        annotations:
+          summary: "Loki ingestion cerca del limite configurado"
+          description: "Ingestion a {{ $value | humanize }}B/s. Aumenta ingestion_rate_mb si esperas mas volumen."
+
+      - alert: LokiIngestionErrors
+        expr: increase(loki_distributor_ingester_appends_failed_total[5m]) > 0
+        for: 10m
+        labels:
+          severity: warning
+          service: loki
+        annotations:
+          summary: "Errores de ingestion en Loki"
+          description: "{{ $value }} errores de ingestion en los ultimos 5 minutos."
+
+      # =================================================================
+      # Promtail
+      # =================================================================
+      - alert: PromtailDown
+        expr: promtail_up == 0
+        for: 5m
+        labels:
+          severity: critical
+          service: promtail
+        annotations:
+          summary: "Promtail no esta funcionando"
+          description: "Promtail dejo de funcionar hace 5+ minutos. Los logs no se estan enviando a Loki."
+
+      - alert: PromtailStreamErrors
+        expr: increase(promtail_read_errors_total[10m]) > 10
+        for: 10m
+        labels:
+          severity: warning
+          service: promtail
+        annotations:
+          summary: "Promtail con muchos errores de lectura"
+          description: "{{ $value }} errores de lectura en los ultimos 10 minutos."
+
+      - alert: PromtailDockerSDDown
+        expr: absent(promtail_docker_sd_docker_url_response_parse_failures_total) == 1
+        for: 10m
+        labels:
+          severity: warning
+          service: promtail
+        annotations:
+          summary: "Promtail no puede conectar con Docker socket"
+          description: "Verifica que /var/run/docker.sock este montado y accesible."
+
+      # =================================================================
+      # Host / Coolify
+      # =================================================================
+      # Descomenta si agregas node-exporter al compose.
+      # - alert: HostHighCpuLoad
+      #   expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+      #   for: 10m
+      #   labels:
+      #     severity: warning
+      #   annotations:
+      #     summary: "CPU alto en {{ $labels.instance }}"
+      #     description: "Uso de CPU {{ $value | humanize }}% durante 10+ minutos."

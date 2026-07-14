@@ -1,5 +1,28 @@
 # Configuracion Prometheus para el stack de monitoring.
-# Edita la seccion `scrape_configs` para apuntar a tus aplicaciones.
+#
+# =============================================================================
+# RED EN COOLIFY: NOTA IMPORTANTE
+# =============================================================================
+# Cuando despliegas apps via Coolify, cada app vive en su propia Docker
+# network (por ejemplo 'coolify'). El stack de monitoring vive en su propia
+# network ('monitoring') y NO comparte red con tus apps por defecto.
+#
+# Para que Prometheus pueda scrape el endpoint /metrics de tus apps, tenes
+# dos opciones:
+#
+# A) SCRAPE POR URL PUBLICA (RECOMENDADO)
+#    Tu app expone /metrics publicamente (con HTTPS + basic_auth) y
+#    Prometheus lo scrapea como si fuera un servicio externo. No requiere
+#    tocar redes de Docker. Ver "Opcion A" abajo.
+#
+# B) COMPARTIR RED CON COOLIFY
+#    Agregas la network 'coolify' como externa en este compose y conectas
+#    Prometheus a ella. Mas fragil porque el nombre de la red puede variar.
+#    Ver "Opcion B" abajo.
+#
+# Para LOGS no hay problema: Promtail descubre todos los containers via
+# /var/run/docker.sock, sin importar en que red esten.
+# =============================================================================
 
 global:
   scrape_interval: 15s
@@ -48,21 +71,36 @@ scrape_configs:
   # ============================================================
   # TUS APLICACIONES
   # ============================================================
-  # Descomenta y adapta los siguientes bloques para scrape de tus apps.
-  # Recomendacion: en Coolify el backend debe exponer un endpoint
-  # /metrics (publico o protegido con basic_auth).
+  # Descomenta el ejemplo que se ajuste a tu setup.
+  # Para que esto funcione, tu backend debe exponer un endpoint /metrics.
+  # Backends comunes: NestJS (usando prom-client), Express, Fastify.
 
-  # Ejemplo 1: scrape via URL publica
+  # ---------- OPCION A: SCRAPE VIA URL PUBLICA (RECOMENDADO) ----------
+  # Requiere que tu backend exponga /metrics por HTTPS (con o sin basic_auth).
+  # No requiere cambios de red.
+  #
   # - job_name: backend
   #   metrics_path: /metrics
   #   scheme: https
+  #   scrape_interval: 30s
   #   static_configs:
-  #     - targets: ['api.tudominio.com:443']
+  #     - targets: ['api.tudominio.com']
   #       labels:
   #         service: backend
   #         env: production
+  #   basic_auth:                                # opcional, recomendado
+  #     username: prometheus
+  #     password_file: /etc/prometheus/metrics_password
 
-  # Ejemplo 2: scrape via red Docker (ambas apps en la misma network)
+  # ---------- OPCION B: SCRAPE VIA RED DOCKER COMPARTIDA ----------
+  # Requiere que tanto este stack como tu app esten en la misma network.
+  # Para usarlo:
+  #   1. Averigua el nombre de la red de tu app en Coolify
+  #      (usualmente 'coolify' o por proyecto)
+  #   2. Agrega la network externa al final de este compose
+  #   3. Conecta el servicio prometheus a esa network
+  # No necesita URLs publicas.
+  #
   # - job_name: backend
   #   metrics_path: /metrics
   #   static_configs:
@@ -70,10 +108,3 @@ scrape_configs:
   #       labels:
   #         service: backend
   #         env: production
-
-  # Ejemplo 3: con basic auth para endpoint protegido
-  # - job_name: backend
-  #   metrics_path: /metrics
-  #   basic_auth:
-  #     username: prometheus
-  #     password_file: /etc/prometheus/metrics_password

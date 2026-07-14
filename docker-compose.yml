@@ -13,17 +13,33 @@
 #     2. En Coolify, crea un nuevo "Resource" -> "Docker Compose".
 #     3. Apuntalo al repo y a la rama.
 #     4. Configura las variables de entorno (GRAFANA_ADMIN_PASSWORD, etc).
-#     5. Asigna un dominio al servicio "grafana" para HTTPS automatico.
+#     5. Asigna UN UNICO dominio al servicio "grafana" para HTTPS automatico.
 #
 # USO LOCAL:
 #   cp .env.example .env
 #   docker compose up -d
 #
+# DOMINIOS EN COOLIFY:
+#   SOLO grafana debe tener un dominio publico. Los demas servicios quedan
+#   accesibles solo desde el host o via tunnel SSH:
+#
+#   Servicio     | Dominio publico | Por que
+#   -------------|-----------------|----------------------------------
+#   grafana      | SI (HTTPS)      | UI para humanos
+#   prometheus   | NO              | API de PromQL + reload de config
+#   alertmanager | NO              | UI de gestion de alertas
+#   loki         | NO              | API de queries a logs
+#   promtail     | NO              | Agente sin UI
+#
+#   Si necesitas la UI de prometheus/alertmanager/loki para debug, usa SSH:
+#     ssh -L 9091:127.0.0.1:9091 usuario@server    # prometheus
+#     ssh -L 9093:127.0.0.1:9093 usuario@server    # alertmanager
+#     ssh -L 3101:127.0.0.1:3101 usuario@server    # loki
+#
 # NOTAS:
-#   - Los puertos estan bindeados a 127.0.0.1 (loopback). Coolify Traefik
-#     corre en el host, asi que puede acceder a ellos sin exponerlos
-#     publicamente.
-#   - Grafana se expone al exterior exclusivamente por Coolify/Traefik.
+#   - Grafana habla con prometheus/loki internamente por la red 'monitoring'
+#     usando los nombres de servicio (prometheus:9090, loki:3100).
+#   - Los puertos en 127.0.0.1 son solo para el host (debug SSH).
 # =============================================================================
 
 services:
@@ -54,6 +70,10 @@ services:
         limits:
           cpus: '1'
           memory: 1G
+    labels:
+      - "traefik.enable=false"
+      - "coolify.managed=false"
+      - "coolify.exclude=true"
 
   alertmanager:
     image: prom/alertmanager:v0.27.0
@@ -81,6 +101,10 @@ services:
         limits:
           cpus: '0.5'
           memory: 256M
+    labels:
+      - "traefik.enable=false"
+      - "coolify.managed=false"
+      - "coolify.exclude=true"
 
   loki:
     image: grafana/loki:3.3.2
@@ -99,6 +123,10 @@ services:
         limits:
           cpus: '1'
           memory: 1G
+    labels:
+      - "traefik.enable=false"
+      - "coolify.managed=false"
+      - "coolify.exclude=true"
 
   promtail:
     image: grafana/promtail:3.3.2
@@ -118,6 +146,10 @@ services:
         limits:
           cpus: '0.5'
           memory: 256M
+    labels:
+      - "traefik.enable=false"
+      - "coolify.managed=false"
+      - "coolify.exclude=true"
 
   grafana:
     image: grafana/grafana:11.4.0

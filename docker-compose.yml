@@ -161,8 +161,10 @@ services:
       - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL:-http://localhost:3000}
       - GF_INSTALL_PLUGINS=${GRAFANA_PLUGINS:-}
     volumes:
-      - ./grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - ./grafana/provisioning/dashboards/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
+      - ./grafana/provisioning/datasources/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+      - ./grafana/dashboards/logs.json:/var/lib/grafana/dashboards/logs.json:ro
+      - ./grafana/dashboards/metrics.json:/var/lib/grafana/dashboards/metrics.json:ro
       - grafana-data:/var/lib/grafana
     ports:
       - "127.0.0.1:3030:3000"

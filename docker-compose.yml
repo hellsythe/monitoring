@@ -44,7 +44,10 @@
 
 services:
   prometheus:
-    image: prom/prometheus:v2.55.1
+    build:
+      context: .
+      dockerfile: images/prometheus.Dockerfile
+    image: local/monitoring-prometheus:coolify
     container_name: monitoring-prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -54,8 +57,6 @@ services:
       - '--web.console.templates=/usr/share/prometheus/consoles'
       - '--web.enable-lifecycle'
     volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./prometheus/rules:/etc/prometheus/rules:ro
       - prometheus-data:/prometheus
     ports:
       - "127.0.0.1:9091:9090"
@@ -106,11 +107,13 @@ services:
   #     - "coolify.exclude=true"
 
   loki:
-    image: grafana/loki:3.3.2
+    build:
+      context: .
+      dockerfile: images/loki.Dockerfile
+    image: local/monitoring-loki:coolify
     container_name: monitoring-loki
     command: -config.file=/etc/loki/local-config.yaml
     volumes:
-      - ./loki/local-config.yaml:/etc/loki/local-config.yaml:ro
       - loki-data:/loki
     ports:
       - "127.0.0.1:3101:3100"
@@ -128,12 +131,14 @@ services:
       - "coolify.exclude=true"
 
   promtail:
-    image: grafana/promtail:3.3.2
+    build:
+      context: .
+      dockerfile: images/promtail.Dockerfile
+    image: local/monitoring-promtail:coolify
     container_name: monitoring-promtail
     command: -config.file=/etc/promtail/config.yml
     user: "0:0"
     volumes:
-      - ./promtail/promtail-config.yml:/etc/promtail/config.yml:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - monitoring
@@ -151,7 +156,10 @@ services:
       - "coolify.exclude=true"
 
   grafana:
-    image: grafana/grafana:11.4.0
+    build:
+      context: .
+      dockerfile: images/grafana.Dockerfile
+    image: local/monitoring-grafana:coolify
     container_name: monitoring-grafana
     environment:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
@@ -161,10 +169,6 @@ services:
       - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL:-http://localhost:3000}
       - GF_INSTALL_PLUGINS=${GRAFANA_PLUGINS:-}
     volumes:
-      - ./grafana/provisioning/dashboards/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
-      - ./grafana/provisioning/datasources/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
-      - ./grafana/dashboards/logs.json:/var/lib/grafana/dashboards/logs.json:ro
-      - ./grafana/dashboards/metrics.json:/var/lib/grafana/dashboards/metrics.json:ro
       - grafana-data:/var/lib/grafana
     ports:
       - "127.0.0.1:3030:3000"

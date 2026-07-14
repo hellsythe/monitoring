@@ -32,11 +32,11 @@ global:
 rule_files:
   - /etc/prometheus/rules/*.yml
 
-# Integracion con Alertmanager
-alerting:
-  alertmanagers:
-    - static_configs:
-        - targets: ['alertmanager:9093']
+# Integracion con Alertmanager (deshabilitado)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets: ['alertmanager:9093']
 
 scrape_configs:
   # Auto-scrape de Prometheus a si mismo
@@ -46,12 +46,12 @@ scrape_configs:
         labels:
           service: prometheus
 
-  # Alertmanager expone metricas en /metrics en el puerto 9093
-  - job_name: alertmanager
-    static_configs:
-      - targets: ['alertmanager:9093']
-        labels:
-          service: alertmanager
+  # Alertmanager expone metricas en /metrics en el puerto 9093 (deshabilitado)
+  # - job_name: alertmanager
+  #   static_configs:
+  #     - targets: ['alertmanager:9093']
+  #       labels:
+  #         service: alertmanager
 
   # Loki expone metricas en /metrics en el puerto 3100
   - job_name: loki

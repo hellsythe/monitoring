@@ -61,8 +61,8 @@ services:
       - "127.0.0.1:9091:9090"
     networks:
       - monitoring
-    depends_on:
-      - alertmanager
+    # depends_on:                          # deshabilitado: alertmanager ya no se despliega
+    #   - alertmanager
     restart: unless-stopped
     deploy:
       resources:
@@ -74,36 +74,36 @@ services:
       - "coolify.managed=false"
       - "coolify.exclude=true"
 
-  alertmanager:
-    image: prom/alertmanager:v0.27.0
-    container_name: monitoring-alertmanager
-    command:
-      - '--config.file=/etc/alertmanager/alertmanager.yml'
-      - '--storage.path=/alertmanager'
-    volumes:
-      - ./alertmanager/entrypoint.sh:/entrypoint.sh:ro
-      - ./alertmanager/alertmanager.yml.template:/etc/alertmanager/alertmanager.yml.template:ro
-      - alertmanager-data:/alertmanager
-    entrypoint: ['/bin/sh', '/entrypoint.sh']
-    environment:
-      - ALERT_WEBHOOK_URL=${ALERT_WEBHOOK_URL:-}
-      - SMTP_SMARTHOST=${SMTP_SMARTHOST:-}
-      - SMTP_USERNAME=${SMTP_USERNAME:-}
-      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
-    ports:
-      - "127.0.0.1:9093:9093"
-    networks:
-      - monitoring
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 256M
-    labels:
-      - "traefik.enable=false"
-      - "coolify.managed=false"
-      - "coolify.exclude=true"
+  # alertmanager:
+  #   image: prom/alertmanager:v0.27.0
+  #   container_name: monitoring-alertmanager
+  #   command:
+  #     - '--config.file=/etc/alertmanager/alertmanager.yml'
+  #     - '--storage.path=/alertmanager'
+  #   volumes:
+  #     - ./alertmanager/entrypoint.sh:/entrypoint.sh:ro
+  #     - ./alertmanager/alertmanager.yml.template:/etc/alertmanager/alertmanager.yml.template:ro
+  #     - alertmanager-data:/alertmanager
+  #   entrypoint: ['/bin/sh', '/entrypoint.sh']
+  #   environment:
+  #     - ALERT_WEBHOOK_URL=${ALERT_WEBHOOK_URL:-}
+  #     - SMTP_SMARTHOST=${SMTP_SMARTHOST:-}
+  #     - SMTP_USERNAME=${SMTP_USERNAME:-}
+  #     - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+  #   ports:
+  #     - "127.0.0.1:9093:9093"
+  #   networks:
+  #     - monitoring
+  #   restart: unless-stopped
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         cpus: '0.5'
+  #         memory: 256M
+  #   labels:
+  #     - "traefik.enable=false"
+  #     - "coolify.managed=false"
+  #     - "coolify.exclude=true"
 
   loki:
     image: grafana/loki:3.3.2
@@ -195,8 +195,8 @@ networks:
 volumes:
   prometheus-data:
     name: monitoring-prometheus-data
-  alertmanager-data:
-    name: monitoring-alertmanager-data
+  # alertmanager-data:                       # deshabilitado: alertmanager ya no se despliega
+  #   name: monitoring-alertmanager-data
   loki-data:
     name: monitoring-loki-data
   grafana-data:
